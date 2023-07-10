@@ -1,0 +1,203 @@
+# -*- coding: utf-8 -*-
+
+"""
+
+Created on Thu Jun 15 10:57:28 2023
+
+@author: Matth
+
+"""
+
+import pandas as pd
+
+import numpy as np
+
+import seaborn as sns
+
+import matplotlib.pyplot as plt
+
+from sklearn.decomposition import PCA
+
+from sklearn.cross_decomposition import CCA
+
+from scipy import stats
+
+import scipy
+
+from scipy.stats import linregress
+
+from scipy.linalg import pearsonr
+
+from scipy.stats import pearsonr
+
+data = pd.read_csv(r"C:\Users\Matth\Downloads\humanAR_1mbData.csv")
+
+# Select the variables for correlation analysis
+
+mutation_rates = data[['ins.std', 'del.std', 'sub.std', 'microsat.std']]
+
+genomic_features = data[['GC', 'CpG', 'nCGm', 'LINE', 'SINE', 'NLp']]
+
+# Compute correlation matrix
+
+correlation_matrix = pd.concat([mutation_rates, genomic_features], axis=1).corr()
+
+# Subset correlation matrix for mutation rates and genomic features
+
+mutation_genomic_correlations = correlation_matrix.loc[['ins.std', 'del.std', 'sub.std', 'microsat.std'], ['GC', 'CpG', 'nCGm', 'LINE', 'SINE', 'NLp']]
+
+# Create correlation heatmap
+
+plt.figure(figsize=(8, 6))
+
+sns.heatmap(mutation_genomic_correlations, annot=True, cmap='coolwarm', fmt=".2f", square=True)
+
+plt.title('Correlation Heatmap - Mutation Rates vs Genomic Features')
+
+plt.show()
+
+#%% PCA
+
+# Select the variables for PCA
+
+mutation_rates = data[['ins.std', 'del.std', 'sub.std', 'microsat.std']]
+
+# Perform PCA on mutation rates
+
+pca = PCA()
+
+mutation_pcs = pca.fit_transform(mutation_rates)
+
+# Create a DataFrame for the mutation PCs
+
+mutation_pc_df = pd.DataFrame(mutation_pcs, columns=[f'PC{i+1}' for i in range(mutation_pcs.shape[1])])
+
+# Combine mutation PCs with genomic features
+
+combined_data = pd.concat([mutation_pc_df, data[['GC', 'CpG', 'nCGm', 'LINE', 'SINE', 'NLp']]], axis=1)
+
+# Compute correlation matrix
+
+correlation_matrix = combined_data.corr()
+
+# Select correlation between PC1 and PC2 with genomic features
+
+pc_genomic_correlations = correlation_matrix.loc[['PC1', 'PC2'], ['GC', 'CpG', 'nCGm', 'LINE', 'SINE', 'NLp']]
+
+# Create correlation heatmap
+
+plt.figure(figsize=(8, 6))
+
+sns.heatmap(pc_genomic_correlations, annot=True, cmap='coolwarm', fmt=".2f", square=True)
+
+plt.title('Correlation Heatmap - PC1 and PC2 vs Genomic Features')
+
+plt.show()
+
+#%% CCA
+
+data = pd.read_csv(r"C:\Users\Matth\Downloads\humanAR_1mbData.csv")
+
+# Select the mutation rate columns and genomic feature columns
+
+mutation_rates = data[['ins.std', 'del.std', 'sub.std', 'microsat.std']]
+
+genomic_features = data[['GC', 'CpG', 'nCGm', 'LINE', 'SINE', 'NLp']]
+
+# Perform CCA
+
+cca = CCA(n_components=2)
+
+cca.fit(mutation_rates, genomic_features)
+
+# Get the canonical variates
+
+mutation_canonical, feature_canonical = cca.transform(mutation_rates, genomic_features)
+
+# Plot the first canonical variate
+
+plt.figure(figsize=(8, 6))
+
+plt.scatter(mutation_canonical[:, 0], feature_canonical[:, 0], label='Canonical 1')
+
+plt.xlabel('Mutation Canonical Variate 1')
+
+plt.ylabel('Genomic Feature Canonical Variate 1')
+
+plt.title('Canonical Correlation Analysis (Canonical 1)')
+
+plt.legend()
+
+plt.show()
+
+# Plot the second canonical variate
+
+plt.figure(figsize=(8, 6))
+
+plt.scatter(mutation_canonical[:, 1], feature_canonical[:, 1], label='Canonical 2')
+
+plt.xlabel('Mutation Canonical Variate 2')
+
+plt.ylabel('Genomic Feature Canonical Variate 2')
+
+plt.title('Canonical Correlation Analysis (Canonical 2)')
+
+plt.legend()
+
+plt.show()
+
+# Get the canonical variates
+
+x, y = cca.transform(mutation_rates, genomic_features)
+
+corrcoef, p_value = scipy.stats.pearsonr(x[:, 0], y[:, 0])
+
+print("Estimate of Canonical Correlation (Canonical 1):", corrcoef)
+
+print("p-value:", p_value)
+
+# Compute correlations between variables and canonical variate for the first component
+
+canonical_variate = mutation_canonical[:, 0]
+
+correlations = np.corrcoef(mutation_rates, canonical_variate, rowvar=False)[:4, 4]
+
+# Print the correlations
+
+for i, variable in enumerate(mutation_rates.columns):
+
+print(f"Correlation between {variable} and Canonical Variate 1: {correlations[i]}")
+
+canonical_variate_2 = mutation_canonical[:, 1]
+
+correlations_2 = np.corrcoef(mutation_rates, canonical_variate_2, rowvar=False)[:4, 4]
+
+# Print the correlations
+
+for i, variable in enumerate(mutation_rates.columns):
+
+print(f"Correlation between {variable} and Canonical Variate 2: {correlations_2[i]}")
+
+# Compute correlations between variables and canonical variates for the first component
+
+canonical_variate_3 = feature_canonical[:, 0]
+
+correlations_3 = np.corrcoef(genomic_features, canonical_variate_3, rowvar=False)[:6, 6]
+
+# Print the correlations for canonical variate 3
+
+for i, variable in enumerate(genomic_features.columns):
+
+print(f"Correlation between {variable} and Canonical Variate 3: {correlations_3[i]}")
+
+# Compute correlations between variables and canonical variates for the second component
+
+canonical_variate_4 = feature_canonical[:, 1]
+
+correlations_4 = np.corrcoef(genomic_features, canonical_variate_4, rowvar=False)[:6, 6]
+
+# Print the correlations for canonical variate 4
+
+for i, variable in enumerate(genomic_features.columns):
+
+print(f"Correlation between {variable} and Canonical Variate 4: {correlations_4[i]}")
